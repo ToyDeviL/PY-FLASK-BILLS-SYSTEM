@@ -1,8 +1,15 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, abort
 import psycopg2
+import traceback
+import logging
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Adicione uma chave secreta para a sessão
+app.config['DEBUG'] = True  # Exibir mensagens de erro detalhadas no navegador
+
+# Configuração do logger
+logging.basicConfig(level=logging.ERROR)
+logger = logging.getLogger(__name__)
 
 # Configuração do banco de dados PostgreSQL
 def get_db_connection():
@@ -12,6 +19,31 @@ def get_db_connection():
         password="Rebecca@2023",
         host="localhost"
     )
+
+@app.before_request
+def before_request():
+    request.db_connection = get_db_connection()
+
+@app.after_request
+def after_request(response):
+    request.db_connection.close()
+    return response
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # Registrar o traceback do erro
+    tb = traceback.format_exc()
+    logger.error(f"Exception: {str(e)}\n{tb}")
+    
+    # Retornar uma resposta JSON com a mensagem de erro
+    response = jsonify(success=False, error=str(e), traceback=tb)
+    response.status_code = 500
+    return response
+
+@app.errorhandler(404)
+def page_not_found(e):
+    logger.error(f"404 error: {str(e)} - URL requested: {request.url}")
+    return render_template('404.html'), 404
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -52,7 +84,7 @@ def add_expense():
         observacoes = request.form['observacoes']
         metodo_pagamento = request.form['metodo_pagamento']
 
-        conn = get_db_connection()
+        conn = request.db_connection
         cur = conn.cursor()
 
         try:
@@ -66,7 +98,6 @@ def add_expense():
             response = jsonify(success=False, message=str(e))
         finally:
             cur.close()
-            conn.close()
 
         return response
 
@@ -82,7 +113,7 @@ def add_income():
         year = request.form['year']
         recurring = 'recurring' in request.form
 
-        conn = get_db_connection()
+        conn = request.db_connection
         cur = conn.cursor()
 
         try:
@@ -96,7 +127,6 @@ def add_income():
             response = jsonify(success=False, message=str(e))
         finally:
             cur.close()
-            conn.close()
 
         return response
 
@@ -104,22 +134,20 @@ def add_income():
 
 @app.route('/view_expenses')
 def view_expenses():
-    conn = get_db_connection()
+    conn = request.db_connection
     cur = conn.cursor()
     cur.execute("SELECT descricao, categoria, valor_total, parcelas, parcelas_pagas, data_inicio, recorrente, observacoes, metodo_pagamento, id FROM contas")
     expenses = cur.fetchall()
     cur.close()
-    conn.close()
     return render_template('view_expenses_content.html', expenses=expenses)
 
 @app.route('/view_incomes')
 def view_incomes():
-    conn = get_db_connection()
+    conn = request.db_connection
     cur = conn.cursor()
     cur.execute("SELECT amount, income_type, description, month, year, recurring, id FROM incomes")
     incomes = cur.fetchall()
     cur.close()
-    conn.close()
     return render_template('view_incomes_content.html', incomes=incomes)
 
 @app.route('/edit_expense', methods=['POST'])
@@ -135,7 +163,7 @@ def edit_expense():
     observacoes = request.form['observacoes']
     metodo_pagamento = request.form['metodo_pagamento']
 
-    conn = get_db_connection()
+    conn = request.db_connection
     cur = conn.cursor()
 
     try:
@@ -149,7 +177,6 @@ def edit_expense():
         response = jsonify(success=False, message=str(e))
     finally:
         cur.close()
-        conn.close()
 
     return response
 
@@ -157,7 +184,7 @@ def edit_expense():
 def delete_expense():
     id = request.form['id']
 
-    conn = get_db_connection()
+    conn = request.db_connection
     cur = conn.cursor()
 
     try:
@@ -168,7 +195,6 @@ def delete_expense():
         response = jsonify(success=False, message=str(e))
     finally:
         cur.close()
-        conn.close()
 
     return response
 
@@ -182,7 +208,7 @@ def edit_income():
     year = request.form['year']
     recurring = 'recurring' in request.form
 
-    conn = get_db_connection()
+    conn = request.db_connection
     cur = conn.cursor()
 
     try:
@@ -196,7 +222,6 @@ def edit_income():
         response = jsonify(success=False, message=str(e))
     finally:
         cur.close()
-        conn.close()
 
     return response
 
@@ -204,7 +229,7 @@ def edit_income():
 def delete_income():
     id = request.form['id']
 
-    conn = get_db_connection()
+    conn = request.db_connection
     cur = conn.cursor()
 
     try:
@@ -215,12 +240,113 @@ def delete_income():
         response = jsonify(success=False, message=str(e))
     finally:
         cur.close()
-        conn.close()
 
     return response
 
+# Rotas para metas (objetivos)
+@app.route('/add_goal', methods=['POST'])
+def add_goal():
+    name = request.form['name']
+    target_value = request.form['target_value']
+    purchase_link = request.form['purchase_link']
+    deadline = request.form['deadline']
+
+    conn = request.db_connection
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            "INSERT INTO objetivos (name, target_value, purchase_link, deadline) VALUES (%s, %s, %s, %s)",
+            (name, target_value, purchase_link, deadline)
+        )
+        conn.commit()
+        response = jsonify(success=True, message="Meta adicionada com sucesso!")
+    except Exception as e:
+        response = jsonify(success=False, message=str(e))
+    finally:
+        cur.close()
+
+    return response
+
+@app.route('/edit_goal', methods=['POST'])
+def edit_goal():
+    goal_id = request.form['goal_id']
+    name = request.form['name']
+    target_value = request.form['target_value']
+    purchase_link = request.form['purchase_link']
+    deadline = request.form['deadline']
+
+    conn = request.db_connection
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            "UPDATE objetivos SET name = %s, target_value = %s, purchase_link = %s, deadline = %s WHERE id = %s",
+            (name, target_value, purchase_link, deadline, goal_id)
+        )
+        conn.commit()
+        response = jsonify(success=True, message="Meta editada com sucesso!")
+    except Exception as e:
+        response = jsonify(success=False, message=str(e))
+    finally:
+        cur.close()
+
+    return response
+
+@app.route('/delete_goal', methods=['POST'])
+def delete_goal():
+    goal_id = request.form['goal_id']
+
+    conn = request.db_connection
+    cur = conn.cursor()
+
+    try:
+        cur.execute("DELETE FROM objetivos WHERE id = %s", (goal_id,))
+        conn.commit()
+        response = jsonify(success=True, message="Meta excluída com sucesso!")
+    except Exception as e:
+        response = jsonify(success=False, message=str(e))
+    finally:
+        cur.close()
+
+    return response
+
+@app.route('/add_contribution', methods=['POST'])
+def add_contribution():
+    goal_id = request.form['goal_id']
+    contribution_date = request.form['contribution_date']
+    contribution_value = request.form['contribution_value']
+
+    conn = request.db_connection
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            "INSERT INTO contribuicoes (objetivo_id, data, valor) VALUES (%s, %s, %s)",
+            (goal_id, contribution_date, contribution_value)
+        )
+        conn.commit()
+        response = jsonify(success=True, message="Contribuição adicionada com sucesso!")
+    except Exception as e:
+        response = jsonify(success=False, message=str(e))
+    finally:
+        cur.close()
+
+    return response
+
+@app.route('/view_goals')
+def view_goals():
+    conn = request.db_connection
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, target_value, purchase_link, deadline, current_contribution FROM objetivos")
+    goals = cur.fetchall()
+    cur.close()
+    return render_template('view_goals_content.html', goals=goals)
+
 @app.errorhandler(500)
 def internal_error(error):
+    tb = traceback.format_exc()
+    logger.error(f"500 error: {str(error)}\n{tb}")
     return f"500 error: {error}", 500
 
 if __name__ == '__main__':

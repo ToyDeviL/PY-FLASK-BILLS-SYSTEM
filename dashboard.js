@@ -53,18 +53,29 @@ document.addEventListener('DOMContentLoaded', () => {
     function attachEditDeleteHandlers() {
         const editButtons = contentArea.querySelectorAll('.edit-btn');
         const deleteButtons = contentArea.querySelectorAll('.delete-btn');
-        const editModal = document.getElementById('edit-income-modal') || document.getElementById('edit-modal');
-        const closeModalBtn = editModal ? editModal.querySelector('.close-btn') : null;
+        const addContributionButtons = contentArea.querySelectorAll('.add-contribution-btn');
+        const editGoalModal = document.getElementById('edit-goal-modal');
+        const addContributionModal = document.getElementById('add-contribution-modal');
+        const closeModalBtn = editGoalModal ? editGoalModal.querySelector('.close-btn') : null;
+        const closeContributionModalBtn = addContributionModal ? addContributionModal.querySelector('.close-btn') : null;
 
         editButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const id = button.getAttribute('data-id');
-                const row = button.closest('tr');
-                
-                document.getElementById('edit-income-id')?.setAttribute('value', id);
-                document.getElementById('edit-expense-id')?.setAttribute('value', id);
-                
-                editModal.style.display = 'block';
+                if (editGoalModal) {
+                    document.getElementById('edit-goal-id').setAttribute('value', id);
+                    editGoalModal.style.display = 'block';
+                } else {
+                    const editIncomeIdElement = document.getElementById('edit-income-id');
+                    const editExpenseIdElement = document.getElementById('edit-expense-id');
+                    if (editIncomeIdElement) {
+                        editIncomeIdElement.setAttribute('value', id);
+                    }
+                    if (editExpenseIdElement) {
+                        editExpenseIdElement.setAttribute('value', id);
+                    }
+                    editModal.style.display = 'block';
+                }
             });
         });
 
@@ -72,7 +83,11 @@ document.addEventListener('DOMContentLoaded', () => {
             button.addEventListener('click', () => {
                 if (confirm('Tem certeza que deseja excluir este item?')) {
                     const id = button.getAttribute('data-id');
-                    fetch('/delete_income', {
+                    let deleteUrl = '/delete_income';
+                    if (button.classList.contains('delete-goal-btn')) {
+                        deleteUrl = '/delete_goal';
+                    }
+                    fetch(deleteUrl, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
@@ -96,14 +111,34 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
+        addContributionButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const id = button.getAttribute('data-id');
+                document.getElementById('goal-id').setAttribute('value', id);
+                addContributionModal.style.display = 'block';
+            });
+        });
+
         if (closeModalBtn) {
             closeModalBtn.addEventListener('click', () => {
-                editModal.style.display = 'none';
+                editGoalModal.style.display = 'none';
             });
 
             window.addEventListener('click', (event) => {
-                if (event.target == editModal) {
-                    editModal.style.display = 'none';
+                if (event.target == editGoalModal) {
+                    editGoalModal.style.display = 'none';
+                }
+            });
+        }
+
+        if (closeContributionModalBtn) {
+            closeContributionModalBtn.addEventListener('click', () => {
+                addContributionModal.style.display = 'none';
+            });
+
+            window.addEventListener('click', (event) => {
+                if (event.target == addContributionModal) {
+                    addContributionModal.style.display = 'none';
                 }
             });
         }

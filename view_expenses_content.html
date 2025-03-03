@@ -1,84 +1,167 @@
-<h2>Visualizar Despesas</h2>
-<table>
-    <thead>
-        <tr>
-            <th>Descrição</th>
-            <th>Categoria</th>
-            <th>Valor Total</th>
-            <th>Parcelas</th>
-            <th>Parcelas Pagas</th>
-            <th>Data de Início</th>
-            <th>Recorrente</th>
-            <th>Observações</th>
-            <th>Método de Pagamento</th>
-            <th>Ações</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for expense in expenses %}
-        <tr>
-            <td>{{ expense[0] }}</td>
-            <td>{{ expense[1] }}</td>
-            <td>{{ expense[2] }}</td>
-            <td>{{ expense[3] }}</td>
-            <td>{{ expense[4] }}</td>
-            <td>{{ expense[5] }}</td>
-            <td>{{ 'Sim' if expense[6] else 'Não' }}</td>
-            <td>{{ expense[7] }}</td>
-            <td>{{ expense[8] }}</td>
-            <td>
-                <button class="edit-btn" data-id="{{ expense[9] }}">Editar</button>
-                <button class="delete-btn" data-id="{{ expense[9] }}">Excluir</button>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizar Despesas</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const editButtons = document.querySelectorAll('.edit-btn');
+            const deleteButtons = document.querySelectorAll('.delete-btn');
+            const editModal = document.getElementById('edit-modal');
+            const closeBtn = document.querySelector('.close-btn');
+            const editForm = document.getElementById('edit-expense-form');
 
-<!-- Modal para edição -->
-<div id="edit-modal" class="modal">
-    <div class="modal-content">
-        <span class="close-btn">&times;</span>
-        <h2>Editar Despesa</h2>
-        <form id="edit-expense-form" action="/edit_expense" method="POST">
-            <input type="hidden" id="edit-expense-id" name="id">
-            <div class="form-group">
-                <label for="edit-descricao">Descrição</label>
-                <input type="text" id="edit-descricao" name="descricao" required>
-            </div>
-            <div class="form-group">
-                <label for="edit-categoria">Categoria</label>
-                <input type="text" id="edit-categoria" name="categoria" required>
-            </div>
-            <div class="form-group">
-                <label for="edit-valor_total">Valor Total</label>
-                <input type="number" id="edit-valor_total" name="valor_total" step="0.01" required>
-            </div>
-            <div class="form-group">
-                <label for="edit-parcelas">Parcelas</label>
-                <input type="number" id="edit-parcelas" name="parcelas" required>
-            </div>
-            <div class="form-group">
-                <label for="edit-parcelas_pagas">Parcelas Pagas</label>
-                <input type="number" id="edit-parcelas_pagas" name="parcelas_pagas" required>
-            </div>
-            <div class="form-group">
-                <label for="edit-data_inicio">Data de Início</label>
-                <input type="date" id="edit-data_inicio" name="data_inicio" required>
-            </div>
-            <div class="form-group">
-                <label for="edit-recorrente">Recorrente</label>
-                <input type="checkbox" id="edit-recorrente" name="recorrente">
-            </div>
-            <div class="form-group">
-                <label for="edit-observacoes">Observações</label>
-                <textarea id="edit-observacoes" name="observacoes" required></textarea>
-            </div>
-            <div class="form-group">
-                <label for="edit-metodo_pagamento">Método de Pagamento</label>
-                <input type="text" id="edit-metodo_pagamento" name="metodo_pagamento" required>
-            </div>
-            <button type="submit">Salvar Alterações</button>
-        </form>
+            editButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const expenseId = this.dataset.id;
+                    const row = this.closest('tr');
+                    const descricao = row.children[0].innerText;
+                    const categoria = row.children[1].innerText;
+                    const valor_total = row.children[2].innerText;
+                    const parcelas = row.children[3].innerText;
+                    const parcelas_pagas = row.children[4].innerText;
+                    const data_inicio = row.children[5].innerText;
+                    const recorrente = row.children[6].innerText === 'Sim';
+                    const observacoes = row.children[7].innerText;
+                    const metodo_pagamento = row.children[8].innerText;
+
+                    document.getElementById('edit-expense-id').value = expenseId;
+                    document.getElementById('edit-descricao').value = descricao;
+                    document.getElementById('edit-categoria').value = categoria;
+                    document.getElementById('edit-valor_total').value = valor_total;
+                    document.getElementById('edit-parcelas').value = parcelas;
+                    document.getElementById('edit-parcelas_pagas').value = parcelas_pagas;
+                    document.getElementById('edit-data_inicio').value = data_inicio;
+                    document.getElementById('edit-recorrente').checked = recorrente;
+                    document.getElementById('edit-observacoes').value = observacoes;
+                    document.getElementById('edit-metodo_pagamento').value = metodo_pagamento;
+
+                    editModal.style.display = 'block';
+                });
+            });
+
+            closeBtn.addEventListener('click', function() {
+                editModal.style.display = 'none';
+            });
+
+            window.addEventListener('click', function(event) {
+                if (event.target == editModal) {
+                    editModal.style.display = 'none';
+                }
+            });
+
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const expenseId = this.dataset.id;
+                    if (confirm('Tem certeza de que deseja excluir esta despesa?')) {
+                        fetch('/delete_expense', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: `id=${expenseId}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                location.reload();
+                            } else {
+                                alert('Erro ao excluir despesa: ' + data.message);
+                            }
+                        });
+                    }
+                });
+            });
+
+        });
+    </script>
+</head>
+<body>
+    <h2>Visualizar Despesas</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Descrição</th>
+                <th>Categoria</th>
+                <th>Valor Total</th>
+                <th>Parcelas</th>
+                <th>Parcelas Pagas</th>
+                <th>Data de Início</th>
+                <th>Recorrente</th>
+                <th>Observações</th>
+                <th>Método de Pagamento</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in expenses %}
+            <tr>
+                <td>{{ expense[0] }}</td>
+                <td>{{ expense[1] }}</td>
+                <td>{{ expense[2] }}</td>
+                <td>{{ expense[3] }}</td>
+                <td>{{ expense[4] }}</td>
+                <td>{{ expense[5] }}</td>
+                <td>{{ 'Sim' if expense[6] else 'Não' }}</td>
+                <td>{{ expense[7] }}</td>
+                <td>{{ expense[8] }}</td>
+                <td>
+                    <button class="edit-btn" data-id="{{ expense[9] }}">Editar</button>
+                    <button class="delete-btn" data-id="{{ expense[9] }}">Excluir</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Modal para edição -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Editar Despesa</h2>
+            <form id="edit-expense-form" action="/edit_expense" method="POST">
+                <input type="hidden" id="edit-expense-id" name="id">
+                <div class="form-group">
+                    <label for="edit-descricao">Descrição</label>
+                    <input type="text" id="edit-descricao" name="descricao" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-categoria">Categoria</label>
+                    <input type="text" id="edit-categoria" name="categoria" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-valor_total">Valor Total</label>
+                    <input type="number" id="edit-valor_total" name="valor_total" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-parcelas">Parcelas</label>
+                    <input type="number" id="edit-parcelas" name="parcelas" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-parcelas_pagas">Parcelas Pagas</label>
+                    <input type="number" id="edit-parcelas_pagas" name="parcelas_pagas" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-data_inicio">Data de Início</label>
+                    <input type="date" id="edit-data_inicio" name="data_inicio" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-recorrente">Recorrente</label>
+                    <input type="checkbox" id="edit-recorrente" name="recorrente">
+                </div>
+                <div class="form-group">
+                    <label for="edit-observacoes">Observações</label>
+                    <textarea id="edit-observacoes" name="observacoes" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="edit-metodo_pagamento">Método de Pagamento</label>
+                    <input type="text" id="edit-metodo_pagamento" name="metodo_pagamento" required>
+                </div>
+                <button type="submit">Salvar Alterações</button>
+            </form>
+        </div>
     </div>
-</div>
+</body>
+</html>

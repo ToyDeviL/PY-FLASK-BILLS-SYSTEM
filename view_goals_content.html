@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Objetivos - EMBER & EQUITY</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const editButtons = document.querySelectorAll('.edit-btn');
+            const deleteButtons = document.querySelectorAll('.delete-btn');
+            const addContributionButtons = document.querySelectorAll('.add-contribution-btn');
+            const editModal = document.getElementById('edit-goal-modal');
+            const contributionModal = document.getElementById('add-contribution-modal');
+            const closeModalBtns = document.querySelectorAll('.close-btn');
+
+            editButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const goalId = this.dataset.id;
+                    const row = this.closest('tr');
+                    const name = row.children[0].innerText;
+                    const target_value = row.children[1].innerText;
+                    const purchase_link = row.children[2].innerText;
+                    const deadline = row.children[3].innerText;
+
+                    document.getElementById('edit-goal-id').value = goalId;
+                    document.getElementById('edit-goal-name').value = name;
+                    document.getElementById('edit-goal-value').value = target_value;
+                    document.getElementById('edit-goal-link').value = purchase_link;
+                    document.getElementById('edit-goal-deadline').value = deadline;
+
+                    editModal.style.display = 'block';
+                });
+            });
+
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const goalId = this.dataset.id;
+                    if (confirm('Tem certeza de que deseja excluir esta meta?')) {
+                        fetch('/delete_goal', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: `goal_id=${goalId}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                location.reload();
+                            } else {
+                                alert('Erro ao excluir meta: ' + data.message);
+                            }
+                        });
+                    }
+                });
+            });
+
+            addContributionButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const goalId = this.dataset.id;
+                    document.getElementById('goal-id').value = goalId;
+                    contributionModal.style.display = 'block';
+                });
+            });
+
+            closeModalBtns.forEach(button => {
+                button.addEventListener('click', function() {
+                    editModal.style.display = 'none';
+                    contributionModal.style.display = 'none';
+                });
+            });
+
+            window.addEventListener('click', function(event) {
+                if (event.target == editModal || event.target == contributionModal) {
+                    editModal.style.display = 'none';
+                    contributionModal.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <h2>Objetivos</h2>
+
+    <!-- Formulário para adicionar nova meta -->
+    <form id="add-goal-form" action="/add_goal" method="POST">
+        <div class="form-group">
+            <label for="goal-name">Nome da Meta</label>
+            <input type="text" id="goal-name" name="name" required>
+        </div>
+        <div class="form-group">
+            <label for="goal-value">Valor da Meta (R$)</label>
+            <input type="number" id="goal-value" name="target_value" step="0.01" required>
+        </div>
+        <div class="form-group">
+            <label for="goal-link">Link para Compra</label>
+            <input type="url" id="goal-link" name="purchase_link">
+        </div>
+        <div class="form-group">
+            <label for="goal-deadline">Data Máxima para Conclusão</label>
+            <input type="date" id="goal-deadline" name="deadline" required>
+        </div>
+        <button type="submit">Adicionar Meta</button>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Nome da Meta</th>
+                <th>Valor da Meta (R$)</th>
+                <th>Link para Compra</th>
+                <th>Data Máxima para Conclusão</th>
+                <th>Contribuição Atual (R$)</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for goal in goals %}
+            <tr>
+                <td>{{ goal.name }}</td>
+                <td>{{ goal.target_value }}</td>
+                <td><a href="{{ goal.purchase_link }}" target="_blank">{{ goal.purchase_link }}</a></td>
+                <td>{{ goal.deadline }}</td>
+                <td>{{ goal.current_contribution }}</td>
+                <td>
+                    <button class="edit-btn" data-id="{{ goal.id }}">Editar</button>
+                    <button class="delete-btn delete-goal-btn" data-id="{{ goal.id }}">Excluir</button>
+                    <button class="add-contribution-btn" data-id="{{ goal.id }}">Adicionar Contribuição</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Modal para adicionar contribuições -->
+    <div id="add-contribution-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Adicionar Contribuição</h2>
+            <form id="add-contribution-form" action="/add_contribution" method="POST">
+                <input type="hidden" id="goal-id" name="goal_id">
+                <div class="form-group">
+                    <label for="contribution-date">Data da Contribuição</label>
+                    <input type="date" id="contribution-date" name="contribution_date" required>
+                </div>
+                <div class="form-group">
+                    <label for="contribution-value">Valor da Contribuição (R$)</label>
+                    <input type="number" id="contribution-value" name="contribution_value" step="0.01" required>
+                </div>
+                <button type="submit">Salvar Contribuição</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para editar metas -->
+    <div id="edit-goal-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Editar Meta</h2>
+            <form id="edit-goal-form" action="/edit_goal" method="POST">
+                <input type="hidden" id="edit-goal-id" name="goal_id">
+                <div class="form-group">
+                    <label for="edit-goal-name">Nome da Meta</label>
+                    <input type="text" id="edit-goal-name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-goal-value">Valor da Meta (R$)</label>
+                    <input type="number" id="edit-goal-value" name="target_value" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-goal-link">Link para Compra</label>
+                    <input type="url" id="edit-goal-link" name="purchase_link">
+                </div>
+                <div class="form-group">
+                    <label for="edit-goal-deadline">Data Máxima para Conclusão</label>
+                    <input type="date" id="edit-goal-deadline" name="deadline" required>
+                </div>
+                <button type="submit">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
