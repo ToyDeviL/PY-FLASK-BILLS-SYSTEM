@@ -5,14 +5,11 @@ document.addEventListener('DOMContentLoaded', () => {
     navLinks.forEach(link => {
         link.addEventListener('click', (event) => {
             event.preventDefault();
-            const pageUrl = link.getAttribute('data-page-url');
-            fetch(pageUrl)
+            fetch(link.getAttribute('data-page-url'))
                 .then(response => response.text())
                 .then(html => {
                     contentArea.innerHTML = html;
-                    attachFormSubmitHandler();
-                    attachEditDeleteHandlers();
-                    attachFilterFormHandler();
+                    attachHandlers();
                 })
                 .catch(error => {
                     console.error('Error loading page:', error);
@@ -21,26 +18,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    function attachHandlers() {
+        attachFormSubmitHandler();
+        attachEditDeleteHandlers();
+        attachFilterFormHandler();
+        if (document.getElementById('add-goal-form')) {
+            attachGoalHandlers();
+        }
+    }
+
     function attachFormSubmitHandler() {
-        const forms = contentArea.querySelectorAll('form');
-        forms.forEach(form => {
+        contentArea.querySelectorAll('form').forEach(form => {
             form.addEventListener('submit', (event) => {
                 event.preventDefault();
-                const formData = new FormData(form);
-                const actionUrl = form.getAttribute('action');
-
-                fetch(actionUrl, {
+                fetch(form.getAttribute('action'), {
                     method: 'POST',
-                    body: formData
+                    body: new FormData(form)
                 })
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success) {
-                        alert(data.message);
-                        location.reload();
-                    } else {
-                        alert('Erro: ' + data.message);
-                    }
+                    alert(data.success ? data.message : 'Erro: ' + data.message);
+                    if (data.success) location.reload();
                 })
                 .catch(error => {
                     console.error('Error submitting form:', error);
@@ -51,95 +49,46 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function attachEditDeleteHandlers() {
-        const editButtons = contentArea.querySelectorAll('.edit-btn');
-        const deleteButtons = contentArea.querySelectorAll('.delete-btn');
-        const addContributionButtons = contentArea.querySelectorAll('.add-contribution-btn');
-        const editGoalModal = document.getElementById('edit-goal-modal');
-        const addContributionModal = document.getElementById('add-contribution-modal');
-        const closeModalBtn = editGoalModal ? editGoalModal.querySelector('.close-btn') : null;
-        const closeContributionModalBtn = addContributionModal ? addContributionModal.querySelector('.close-btn') : null;
-
-        editButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const id = button.getAttribute('data-id');
-                if (editGoalModal) {
-                    document.getElementById('edit-goal-id').setAttribute('value', id);
-                    editGoalModal.style.display = 'block';
-                } else {
-                    const editIncomeIdElement = document.getElementById('edit-income-id');
-                    const editExpenseIdElement = document.getElementById('edit-expense-id');
-                    if (editIncomeIdElement) {
-                        editIncomeIdElement.setAttribute('value', id);
-                    }
-                    if (editExpenseIdElement) {
-                        editExpenseIdElement.setAttribute('value', id);
-                    }
-                    editModal.style.display = 'block';
-                }
-            });
+        contentArea.querySelectorAll('.edit-btn, .delete-btn, .add-contribution-btn').forEach(button => {
+            button.addEventListener('click', () => handleButtonClick(button));
         });
+    }
 
-        deleteButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                if (confirm('Tem certeza que deseja excluir este item?')) {
-                    const id = button.getAttribute('data-id');
-                    let deleteUrl = '/delete_income';
-                    if (button.classList.contains('delete-goal-btn')) {
-                        deleteUrl = '/delete_goal';
-                    }
-                    fetch(deleteUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: new URLSearchParams({ id })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert(data.message);
-                            location.reload();
-                        } else {
-                            alert('Erro: ' + data.message);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error deleting item:', error);
-                        alert('Erro ao excluir o item.');
-                    });
-                }
-            });
-        });
-
-        addContributionButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const id = button.getAttribute('data-id');
-                document.getElementById('goal-id').setAttribute('value', id);
-                addContributionModal.style.display = 'block';
-            });
-        });
-
-        if (closeModalBtn) {
-            closeModalBtn.addEventListener('click', () => {
-                editGoalModal.style.display = 'none';
-            });
-
-            window.addEventListener('click', (event) => {
-                if (event.target == editGoalModal) {
-                    editGoalModal.style.display = 'none';
-                }
-            });
+    function handleButtonClick(button) {
+        const id = button.getAttribute('data-id');
+        if (button.classList.contains('edit-btn')) {
+            handleEdit(id);
+        } else if (button.classList.contains('delete-btn')) {
+            handleDelete(id, button.classList.contains('delete-goal-btn') ? '/delete_goal' : '/delete_income');
+        } else if (button.classList.contains('add-contribution-btn')) {
+            document.getElementById('goal-id').setAttribute('value', id);
+            document.getElementById('add-contribution-modal').style.display = 'block';
         }
+    }
 
-        if (closeContributionModalBtn) {
-            closeContributionModalBtn.addEventListener('click', () => {
-                addContributionModal.style.display = 'none';
-            });
+    function handleEdit(id) {
+        const editGoalModal = document.getElementById('edit-goal-modal');
+        if (editGoalModal) {
+            document.getElementById('edit-goal-id').value = id;
+            editGoalModal.style.display = 'block';
+        }
+    }
 
-            window.addEventListener('click', (event) => {
-                if (event.target == addContributionModal) {
-                    addContributionModal.style.display = 'none';
-                }
+    function handleDelete(id, url) {
+        if (confirm('Tem certeza que deseja excluir este item?')) {
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ id })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.success ? data.message : 'Erro: ' + data.message);
+                if (data.success) location.reload();
+            })
+            .catch(error => {
+                console.error('Error deleting item:', error);
+                alert('Erro ao excluir o item.');
             });
         }
     }
@@ -149,19 +98,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filterForm) {
             filterForm.addEventListener('submit', (event) => {
                 event.preventDefault();
-                const formData = new FormData(filterForm);
-                const actionUrl = filterForm.getAttribute('action');
-
-                fetch(actionUrl, {
+                fetch(filterForm.getAttribute('action'), {
                     method: 'POST',
-                    body: formData
+                    body: new FormData(filterForm)
                 })
                 .then(response => response.text())
                 .then(html => {
                     contentArea.innerHTML = html;
-                    attachFormSubmitHandler();
-                    attachEditDeleteHandlers();
-                    attachFilterFormHandler();
+                    attachHandlers();
                 })
                 .catch(error => {
                     console.error('Error submitting filter form:', error);
@@ -170,4 +114,48 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }
+
+    function attachGoalHandlers() {
+        const addGoalForm = document.getElementById('add-goal-form');
+        const goalsList = document.getElementById('goals-list');
+
+        addGoalForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            fetch('/add_goal', {
+                method: 'POST',
+                body: new FormData(addGoalForm)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.success ? data.message : 'Erro: ' + data.message);
+                if (data.success) loadGoals();
+            })
+            .catch(error => {
+                console.error('Error adding goal:', error);
+                alert('Erro ao adicionar a meta.');
+            });
+        });
+
+        function loadGoals() {
+            fetch('/view_goals_content')
+                .then(response => response.text())
+                .then(html => {
+                    goalsList.innerHTML = html;
+                    attachGoalActions();
+                })
+                .catch(error => {
+                    console.error('Error loading goals:', error);
+                    goalsList.innerHTML = '<p>Erro ao carregar as metas.</p>';
+                });
+        }
+
+        function attachGoalActions() {
+            goalsList.querySelectorAll('.edit-goal-btn, .delete-goal-btn, .add-contribution-btn').forEach(button => {
+                button.addEventListener('click', () => handleButtonClick(button));
+            });
+        }
+
+        loadGoals();
+    }
 });
+

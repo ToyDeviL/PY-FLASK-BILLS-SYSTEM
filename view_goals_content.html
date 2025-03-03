@@ -19,12 +19,14 @@
                     const goalId = this.dataset.id;
                     const row = this.closest('tr');
                     const name = row.children[0].innerText;
-                    const target_value = row.children[1].innerText;
-                    const purchase_link = row.children[2].innerText;
-                    const deadline = row.children[3].innerText;
+                    const descricao = row.children[1].innerText;
+                    const target_value = row.children[2].innerText;
+                    const purchase_link = row.children[3].innerText;
+                    const deadline = row.children[4].innerText;
 
                     document.getElementById('edit-goal-id').value = goalId;
                     document.getElementById('edit-goal-name').value = name;
+                    document.getElementById('edit-goal-descricao').value = descricao;
                     document.getElementById('edit-goal-value').value = target_value;
                     document.getElementById('edit-goal-link').value = purchase_link;
                     document.getElementById('edit-goal-deadline').value = deadline;
@@ -90,6 +92,10 @@
             <input type="text" id="goal-name" name="name" required>
         </div>
         <div class="form-group">
+            <label for="goal-descricao">Descrição da Meta</label>
+            <input type="text" id="goal-descricao" name="descricao" required>
+        </div>
+        <div class="form-group">
             <label for="goal-value">Valor da Meta (R$)</label>
             <input type="number" id="goal-value" name="target_value" step="0.01" required>
         </div>
@@ -108,6 +114,7 @@
         <thead>
             <tr>
                 <th>Nome da Meta</th>
+                <th>Descrição da Meta</th>
                 <th>Valor da Meta (R$)</th>
                 <th>Link para Compra</th>
                 <th>Data Máxima para Conclusão</th>
@@ -119,6 +126,7 @@
             {% for goal in goals %}
             <tr>
                 <td>{{ goal.name }}</td>
+                <td>{{ goal.descricao }}</td>
                 <td>{{ goal.target_value }}</td>
                 <td><a href="{{ goal.purchase_link }}" target="_blank">{{ goal.purchase_link }}</a></td>
                 <td>{{ goal.deadline }}</td>
@@ -139,46 +147,4 @@
             <span class="close-btn">&times;</span>
             <h2>Adicionar Contribuição</h2>
             <form id="add-contribution-form" action="/add_contribution" method="POST">
-                <input type="hidden" id="goal-id" name="goal_id">
-                <div class="form-group">
-                    <label for="contribution-date">Data da Contribuição</label>
-                    <input type="date" id="contribution-date" name="contribution_date" required>
-                </div>
-                <div class="form-group">
-                    <label for="contribution-value">Valor da Contribuição (R$)</label>
-                    <input type="number" id="contribution-value" name="contribution_value" step="0.01" required>
-                </div>
-                <button type="submit">Salvar Contribuição</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal para editar metas -->
-    <div id="edit-goal-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>Editar Meta</h2>
-            <form id="edit-goal-form" action="/edit_goal" method="POST">
-                <input type="hidden" id="edit-goal-id" name="goal_id">
-                <div class="form-group">
-                    <label for="edit-goal-name">Nome da Meta</label>
-                    <input type="text" id="edit-goal-name" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label for="edit-goal-value">Valor da Meta (R$)</label>
-                    <input type="number" id="edit-goal-value" name="target_value" step="0.01" required>
-                </div>
-                <div class="form-group">
-                    <label for="edit-goal-link">Link para Compra</label>
-                    <input type="url" id="edit-goal-link" name="purchase_link">
-                </div>
-                <div class="form-group">
-                    <label for="edit-goal-deadline">Data Máxima para Conclusão</label>
-                    <input type="date" id="edit-goal-deadline" name="deadline" required>
-                </div>
-                <button type="submit">Salvar Alterações</button>
-            </form>
-        </div>
-    </div>
-</body>
-</html>
+                <input type="hidden" id="goal

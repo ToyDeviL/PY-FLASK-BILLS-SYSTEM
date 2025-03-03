@@ -244,48 +244,38 @@ def delete_income():
     return response
 
 # Rotas para metas (objetivos)
+@app.route('/view_goals')
+def view_goals():
+    if 'username' in session:
+        return render_template('goals.html')
+    return redirect(url_for('login'))
+
+@app.route('/view_goals_content')
+def view_goals_content():
+    conn = request.db_connection
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, description, target_value, contribution, purchase_link FROM objetivos")
+    goals = cur.fetchall()
+    cur.close()
+    return render_template('view_goals_content.html', goals=goals)
+
 @app.route('/add_goal', methods=['POST'])
 def add_goal():
     name = request.form['name']
+    description = request.form['description']
     target_value = request.form['target_value']
+    contribution = request.form['contribution']
     purchase_link = request.form['purchase_link']
-    deadline = request.form['deadline']
 
     conn = request.db_connection
     cur = conn.cursor()
-
     try:
         cur.execute(
-            "INSERT INTO objetivos (name, target_value, purchase_link, deadline) VALUES (%s, %s, %s, %s)",
-            (name, target_value, purchase_link, deadline)
+            "INSERT INTO objetivos (name, description, target_value, contribution, purchase_link) VALUES (%s, %s, %s, %s, %s)",
+            (name, description, target_value, contribution, purchase_link)
         )
         conn.commit()
         response = jsonify(success=True, message="Meta adicionada com sucesso!")
-    except Exception as e:
-        response = jsonify(success=False, message=str(e))
-    finally:
-        cur.close()
-
-    return response
-
-@app.route('/edit_goal', methods=['POST'])
-def edit_goal():
-    goal_id = request.form['goal_id']
-    name = request.form['name']
-    target_value = request.form['target_value']
-    purchase_link = request.form['purchase_link']
-    deadline = request.form['deadline']
-
-    conn = request.db_connection
-    cur = conn.cursor()
-
-    try:
-        cur.execute(
-            "UPDATE objetivos SET name = %s, target_value = %s, purchase_link = %s, deadline = %s WHERE id = %s",
-            (name, target_value, purchase_link, deadline, goal_id)
-        )
-        conn.commit()
-        response = jsonify(success=True, message="Meta editada com sucesso!")
     except Exception as e:
         response = jsonify(success=False, message=str(e))
     finally:
@@ -299,7 +289,6 @@ def delete_goal():
 
     conn = request.db_connection
     cur = conn.cursor()
-
     try:
         cur.execute("DELETE FROM objetivos WHERE id = %s", (goal_id,))
         conn.commit()
@@ -310,38 +299,6 @@ def delete_goal():
         cur.close()
 
     return response
-
-@app.route('/add_contribution', methods=['POST'])
-def add_contribution():
-    goal_id = request.form['goal_id']
-    contribution_date = request.form['contribution_date']
-    contribution_value = request.form['contribution_value']
-
-    conn = request.db_connection
-    cur = conn.cursor()
-
-    try:
-        cur.execute(
-            "INSERT INTO contribuicoes (objetivo_id, data, valor) VALUES (%s, %s, %s)",
-            (goal_id, contribution_date, contribution_value)
-        )
-        conn.commit()
-        response = jsonify(success=True, message="Contribuição adicionada com sucesso!")
-    except Exception as e:
-        response = jsonify(success=False, message=str(e))
-    finally:
-        cur.close()
-
-    return response
-
-@app.route('/view_goals')
-def view_goals():
-    conn = request.db_connection
-    cur = conn.cursor()
-    cur.execute("SELECT id, name, target_value, purchase_link, deadline, current_contribution FROM objetivos")
-    goals = cur.fetchall()
-    cur.close()
-    return render_template('view_goals_content.html', goals=goals)
 
 @app.errorhandler(500)
 def internal_error(error):

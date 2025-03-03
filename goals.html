@@ -1,0 +1,29 @@
+<div class="goal-container">
+    <h2>Gerenciar Metas</h2>
+    <form id="add-goal-form" class="goal-form" action="/add_goal" method="POST">
+        <div class="form-group">
+            <label for="goal-name">Nome da Meta:</label>
+            <input type="text" id="goal-name" name="name" required>
+        </div>
+        <div class="form-group">
+            <label for="goal-description">Descrição da Meta:</label>
+            <textarea id="goal-description" name="description" required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="goal-target-value">Valor Alvo:</label>
+            <input type="number" id="goal-target-value" name="target_value" required>
+        </div>
+        <div class="form-group">
+            <label for="goal-contribution">Contribuição Inicial:</label>
+            <input type="number" id="goal-contribution" name="contribution" value="0" required>
+        </div>
+        <div class="form-group">
+            <label for="goal-link">Link do Produto (opcional):</label>
+            <input type="url" id="goal-link" name="purchase_link">
+        </div>
+        <button type="submit">Salvar Meta</button>
+    </form>
+    <div id="goals-list">
+        <!-- Listagem de metas será carregada aqui -->
+    </div>
+</div>
