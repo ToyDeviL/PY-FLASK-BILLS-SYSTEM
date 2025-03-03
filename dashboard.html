@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - EMBER & EQUITY</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="/static/js/theme.js" defer></script>
+    <script src="/static/js/dashboard.js" defer></script>
+</head>
+<body>
+    <span id="theme-toggle" title="Alternar tema">🌙</span>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <header class="header">
+                <h1>EMBER & EQUITY</h1>
+                <form action="/logout" method="post" class="logout-form">
+                    <button type="submit">Logout</button>
+                </form>
+            </header>
+            <nav>
+                <ul>
+                    <li><a href="#" data-page-url="/add_expense" class="nav-link">Adicionar Despesa</a></li>
+                    <li><a href="#" data-page-url="/add_income" class="nav-link">Adicionar Provento</a></li>
+                    <li><a href="#" data-page-url="/view_expenses" class="nav-link">Visualizar Despesas</a></li>
+                    <li><a href="#" data-page-url="/view_incomes" class="nav-link">Visualizar Proventos</a></li>
+                </ul>
+            </nav>
+        </aside>
+        <main class="content">
+            <h2>Bem-vindo ao seu Dashboard</h2>
+            <div id="content-area">
+                <!-- Conteúdo dinâmico será carregado aqui -->
+            </div>
+        </main>
+    </div>
+</body>
+</html>

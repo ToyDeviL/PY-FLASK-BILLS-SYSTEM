@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import psycopg2
 
 app = Flask(__name__)
@@ -42,26 +42,182 @@ def logout():
 @app.route('/add_expense', methods=['GET', 'POST'])
 def add_expense():
     if request.method == 'POST':
-        category = request.form['category']
-        date = request.form['date']
-        description = request.form['description']
+        descricao = request.form['descricao']
+        categoria = request.form['categoria']
+        valor_total = request.form['valor_total']
+        parcelas = request.form['parcelas']
+        parcelas_pagas = request.form['parcelas_pagas']
+        data_inicio = request.form['data_inicio']
+        recorrente = 'recorrente' in request.form
+        observacoes = request.form['observacoes']
+        metodo_pagamento = request.form['metodo_pagamento']
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        try:
+            cur.execute(
+                "INSERT INTO contas (descricao, categoria, valor_total, parcelas, parcelas_pagas, data_inicio, recorrente, observacoes, metodo_pagamento) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (descricao, categoria, valor_total, parcelas, parcelas_pagas, data_inicio, recorrente, observacoes, metodo_pagamento)
+            )
+            conn.commit()
+            response = jsonify(success=True, message="Despesa adicionada com sucesso!")
+        except Exception as e:
+            response = jsonify(success=False, message=str(e))
+        finally:
+            cur.close()
+            conn.close()
+
+        return response
+
+    return render_template('add_expense_content.html')
+
+@app.route('/add_income', methods=['GET', 'POST'])
+def add_income():
+    if request.method == 'POST':
         amount = request.form['amount']
+        income_type = request.form['income_type']
+        description = request.form['description']
+        month = request.form['month']
+        year = request.form['year']
         recurring = 'recurring' in request.form
 
         conn = get_db_connection()
         cur = conn.cursor()
 
+        try:
+            cur.execute(
+                "INSERT INTO incomes (amount, income_type, description, month, year, recurring) VALUES (%s, %s, %s, %s, %s, %s)",
+                (amount, income_type, description, month, year, recurring)
+            )
+            conn.commit()
+            response = jsonify(success=True, message="Provento adicionado com sucesso!")
+        except Exception as e:
+            response = jsonify(success=False, message=str(e))
+        finally:
+            cur.close()
+            conn.close()
+
+        return response
+
+    return render_template('add_income_content.html')
+
+@app.route('/view_expenses')
+def view_expenses():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT descricao, categoria, valor_total, parcelas, parcelas_pagas, data_inicio, recorrente, observacoes, metodo_pagamento, id FROM contas")
+    expenses = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template('view_expenses_content.html', expenses=expenses)
+
+@app.route('/view_incomes')
+def view_incomes():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT amount, income_type, description, month, year, recurring, id FROM incomes")
+    incomes = cur.fetchall()
+    cur.close()
+    conn.close()
+    return render_template('view_incomes_content.html', incomes=incomes)
+
+@app.route('/edit_expense', methods=['POST'])
+def edit_expense():
+    id = request.form['id']
+    descricao = request.form['descricao']
+    categoria = request.form['categoria']
+    valor_total = request.form['valor_total']
+    parcelas = request.form['parcelas']
+    parcelas_pagas = request.form['parcelas_pagas']
+    data_inicio = request.form['data_inicio']
+    recorrente = 'recorrente' in request.form
+    observacoes = request.form['observacoes']
+    metodo_pagamento = request.form['metodo_pagamento']
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
         cur.execute(
-            "INSERT INTO expenses (category, date, description, amount, recurring) VALUES (%s, %s, %s, %s, %s)",
-            (category, date, description, amount, recurring)
+            "UPDATE contas SET descricao = %s, categoria = %s, valor_total = %s, parcelas = %s, parcelas_pagas = %s, data_inicio = %s, recorrente = %s, observacoes = %s, metodo_pagamento = %s WHERE id = %s",
+            (descricao, categoria, valor_total, parcelas, parcelas_pagas, data_inicio, recorrente, observacoes, metodo_pagamento, id)
         )
         conn.commit()
-
+        response = jsonify(success=True, message="Despesa editada com sucesso!")
+    except Exception as e:
+        response = jsonify(success=False, message=str(e))
+    finally:
         cur.close()
         conn.close()
 
-        return redirect(url_for('dashboard'))
-    return render_template('add_expense.html')
+    return response
+
+@app.route('/delete_expense', methods=['POST'])
+def delete_expense():
+    id = request.form['id']
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("DELETE FROM contas WHERE id = %s", (id,))
+        conn.commit()
+        response = jsonify(success=True, message="Despesa excluída com sucesso!")
+    except Exception as e:
+        response = jsonify(success=False, message=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+    return response
+
+@app.route('/edit_income', methods=['POST'])
+def edit_income():
+    id = request.form['id']
+    amount = request.form['amount']
+    income_type = request.form['income_type']
+    description = request.form['description']
+    month = request.form['month']
+    year = request.form['year']
+    recurring = 'recurring' in request.form
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            "UPDATE incomes SET amount = %s, income_type = %s, description = %s, month = %s, year = %s, recurring = %s WHERE id = %s",
+            (amount, income_type, description, month, year, recurring, id)
+        )
+        conn.commit()
+        response = jsonify(success=True, message="Provento editado com sucesso!")
+    except Exception as e:
+        response = jsonify(success=False, message=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+    return response
+
+@app.route('/delete_income', methods=['POST'])
+def delete_income():
+    id = request.form['id']
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("DELETE FROM incomes WHERE id = %s", (id,))
+        conn.commit()
+        response = jsonify(success=True, message="Provento excluído com sucesso!")
+    except Exception as e:
+        response = jsonify(success=False, message=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+    return response
 
 @app.errorhandler(500)
 def internal_error(error):
